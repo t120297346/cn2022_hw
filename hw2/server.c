@@ -261,6 +261,61 @@ int main(int argc, char *argv[]){
                             }
                         }
                     }
+                    else if(strcmp(cmd, "unban") == 0){
+                        if (strcmp(user, "admin") == 0) {
+                            char* ban_user = strsep(&temp, " ");
+                            int exist = 0;
+                            FILE* f;
+                            char* line = "";
+                            size_t len = 0;
+                            char new_file[BUFF_SIZE] = {};
+
+                            f = fopen("./server_dir/banlist", "r+");
+                            if (f == NULL)
+                                ERR_EXIT("banlist open error");
+
+                            while ((getline(&line, &len, f)) != -1) {
+                                strtok(line, "\n");
+                                if (strcmp(ban_user, line) == 0) {
+                                    exist = 1;
+                                }
+                                else {
+                                    sprintf(new_file, "%s%s\n", new_file, line);
+                                    /*
+                                    new_file = realloc(new_file, strlen(new_file) + sizeof(line));
+                                    strcat(new_file, line);
+                                    printf("%s", new_file);
+                                    */
+                                }
+                            }
+                            fclose(f);
+
+                            if (exist){
+                                f = fopen("./server_dir/banlist", "w");
+                                fprintf(f, "%s", new_file);
+                                fclose(f);
+
+                                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                                sprintf(buffer, "Successfully removed %s from the blocklist!\n", ban_user);
+                                if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                                    ERR_EXIT("banlist send errer");
+                                }
+                            }
+                            else{
+                                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                                sprintf(buffer, "User %s is not on blocklist!\n", ban_user);
+                                if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                                    ERR_EXIT("banlist send errer");
+                                }
+                            }
+                        }
+                        else {
+                            char* message = "Permission denied\n";
+                            if(send(new_socket, message, strlen(message), 0) != strlen(message)) {
+                                ERR_EXIT("banlist send errer");
+                            }
+                        }
+                    }
                 }
             }
         }

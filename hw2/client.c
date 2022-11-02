@@ -119,10 +119,26 @@ int main(int argc , char *argv[]){
                 ban_users = strtok(NULL, " ");
             }
         }
-        else if (strcmp(strtok(save, " "), "unban") == 0) {
-            sprintf(buffer, "%s %s ", argv[1], cmd);
-            if(send(sockfd, buffer, strlen(buffer), 0) != strlen(buffer)) {
-                ERR_EXIT("send unban failed");
+        else if (strcmp(cmd, "unban") == 0) {
+            char* ban_users = strdup(cmd);
+            ban_users = strtok(NULL, " ");
+            while (ban_users != NULL) {
+                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                sprintf(buffer, "%s %s %s ", argv[1], cmd, ban_users);
+                if(send(sockfd, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                    ERR_EXIT("send unban failed");
+                }
+
+                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                if((read_byte = read(sockfd, buffer, sizeof(buffer) - 1)) < 0){
+                    ERR_EXIT("receive unban failed\n");
+                }
+
+                printf("%s", buffer);
+                if(strcmp(buffer, "Permission denied\n") == 0)
+                    break;
+
+                ban_users = strtok(NULL, " ");
             }
         }
         /* undefined command */
