@@ -63,6 +63,7 @@ void send_file(FILE *fp, int sockfd){
     char data[1024] = {0};
  
     while(fgets(data, 1024, fp) != NULL) {
+        printf("%s\n", data);
         if (send(sockfd, data, strlen(data), 0) == -1) {
             ERR_EXIT("[-]Error in sending file.");
         }
@@ -83,7 +84,7 @@ void write_file(int sockfd, char* filename){
     FILE *fp;
     char buffer[1024] = {0};
 
-    fp = fopen(filename, "w");
+    fp = fopen(filename, "wb");
     while (1) {
         n = recv(sockfd, buffer, 1024, 0);
 

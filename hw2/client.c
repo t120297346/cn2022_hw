@@ -94,7 +94,7 @@ int main(int argc , char *argv[]){
                 memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
                 sprintf(buffer, "%s %s %s ", argv[1], cmd, filename);
                 if(send(sockfd, buffer, strlen(buffer), 0) != strlen(buffer)) {
-                    ERR_EXIT("send banlist failed");
+                    ERR_EXIT("send put failed");
                 }   
 
                 memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
@@ -104,7 +104,7 @@ int main(int argc , char *argv[]){
 
                 if(strcmp(buffer, "OK") == 0){
                     printf("putting %s...\n", filename);
-                    FILE* f = fopen(file_loc, "r");
+                    FILE* f = fopen(file_loc, "rb");
                     send_file(f, sockfd);
                 }
                 
@@ -116,6 +116,31 @@ int main(int argc , char *argv[]){
             else {
                 printf("File doesn't exist!\n");
             }
+        }
+        else if(strcmp(cmd, "get") == 0){
+            char* filename = strdup(cmd);
+            filename = strtok(NULL, " ");
+
+            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+            sprintf(buffer, "%s %s %s ", argv[1], cmd, filename);
+            if(send(sockfd, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                ERR_EXIT("send get failed");
+            }
+
+            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+            if((read_byte = read(sockfd, buffer, sizeof(buffer) - 1)) < 0){
+                ERR_EXIT("receive put failed\n");
+            }
+            printf("%s", buffer);
+
+            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+            if(send(sockfd, "OK", strlen("OK"), 0) != strlen("OK")) {
+                ERR_EXIT("send get failed");
+            }
+
+            char path[50];
+            sprintf(path, "./client_dir/%s", filename);
+            write_file(sockfd, path);
         }
         else if (strcmp(cmd, "exit") == 0){
             break;

@@ -188,7 +188,6 @@ int main(int argc, char *argv[]){
                     }
                     else if (strcmp(cmd, "put") == 0) {
                         char* filename = strsep(&temp, " ");
-                        pid_t pid;
 
                         memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
                         sprintf(buffer, "OK");
@@ -204,6 +203,31 @@ int main(int argc, char *argv[]){
                         sprintf(buffer, "Done");
                         if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer)) {
                             ERR_EXIT("put finish errer");
+                        }
+                    }
+                    else if (strcmp(cmd, "get") == 0) {
+                        char* filename = strsep(&temp, " ");
+                        char file_loc[60] = "./server_dir/";
+                        sprintf(file_loc, "%s%s/%s", file_loc, user, filename);
+
+                        if (access(file_loc, F_OK) == 0) {
+                            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                            sprintf(buffer, "getting %s...\n", filename);
+                            if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                                ERR_EXIT("send get failed");
+                            }
+
+                            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                            read(new_socket, buffer, sizeof(buffer) - 1);
+                            FILE* f = fopen(file_loc, "rb");
+                            send_file(f, new_socket);
+                        }
+                        else{
+                            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                            sprintf(buffer, "File doesn't exist!\n");
+                            if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                                ERR_EXIT("get finish errer");
+                            }
                         }
                     }
 
