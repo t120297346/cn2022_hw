@@ -3,6 +3,8 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+
+
 void init_server(){
     char server_dir[20] = "./server_dir";
     char client_dir[20] = "./client_dir";
@@ -36,35 +38,64 @@ void init_user(char* user){
     }
 }
 
+int check_ban(char* user){
+    int exist = 0;
+    FILE* f;
+    char* line = "";
+    size_t len = 0;
+    f = fopen("./server_dir/banlist", "r");
+    if (f == NULL)
+        ERR_EXIT("banlist open error");
+
+    while ((getline(&line, &len, f)) != -1) {
+        strtok(line, "\n");
+        if (strcmp(user, line) == 0) {
+            exist = 1;
+            break;
+        }
+    }
+
+    return exist;
+}
+
 void send_file(FILE *fp, int sockfd){
     int n;
     char data[1024] = {0};
  
     while(fgets(data, 1024, fp) != NULL) {
-        if (send(sockfd, data, sizeof(data), 0) == -1) {
-            perror("[-]Error in sending file.");
-            exit(1);
+        if (send(sockfd, data, strlen(data), 0) == -1) {
+            ERR_EXIT("[-]Error in sending file.");
         }
-        bzero(data, 1024);
+        memset(data, '\0', sizeof(char) * 1024);
+
+        read(sockfd, data, sizeof(data) - 1);
+        memset(data, '\0', sizeof(char) * 1024);
+        
+    }
+
+    if (send(sockfd, "Finish", strlen("Finish"), 0) == -1) {
+        ERR_EXIT("[-]Error in sending file.");
     }
 }
 
-void write_file(int sockfd){
+void write_file(int sockfd, char* filename){
     int n;
     FILE *fp;
-    char *filename = "recv.txt";
-    char buffer[1024];
+    char buffer[1024] = {0};
 
     fp = fopen(filename, "w");
     while (1) {
         n = recv(sockfd, buffer, 1024, 0);
-        if (n <= 0){
+
+        if (strcmp(buffer, "Finish") == 0){
             break;
-            return;
         }
         fprintf(fp, "%s", buffer);
-        bzero(buffer, 1024);
+        memset(buffer, '\0', sizeof(char) * 1024);
+        
+        send(sockfd, "OK", strlen("OK"), 0);
     }
+    fclose(fp);
     return;
 }
 

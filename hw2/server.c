@@ -93,8 +93,8 @@ int main(int argc, char *argv[]){
                 max_sd = sd;
         }
 
-	activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);
-	if((activity < 0) && (errno!=EINTR)) {
+	    activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);
+	    if((activity < 0) && (errno!=EINTR)) {
             printf("select error\n");
         }
 
@@ -108,22 +108,30 @@ int main(int argc, char *argv[]){
             if((read_bytes = read(new_socket, buffer, sizeof(buffer) - 1)) < 0){
                 ERR_EXIT("receive failed\n");
             }
-            printf("Accept a new connection on socket [%d]. Login as %s\n", new_socket, buffer);
-            init_user(buffer);
 
-            //send new connection greeting message
-            if(send(new_socket, "Hello", strlen("Hello"), 0) != strlen("Hello")) {
-                perror("send");
+            if(check_ban(buffer) == 0){
+                printf("Accept a new connection on socket [%d]. Login as %s\n", new_socket, buffer);
+                init_user(buffer);
+
+                //send new connection greeting message
+                if(send(new_socket, "Hello", strlen("Hello"), 0) != strlen("Hello")) {
+                    ERR_EXIT("begin send error");
+                }
+                
+
+                //add new socket to array of sockets
+                for(int i = 0; i < max_clients; i++) {
+                    //if position is empty
+                    if( client_socket[i] == 0 ){
+                        client_socket[i] = new_socket;
+                        //printf("Adding to list of sockets as %d\n" , i);
+                        break;
+                    }
+                }
             }
-            
-
-            //add new socket to array of sockets
-            for(int i = 0; i < max_clients; i++) {
-                //if position is empty
-                if( client_socket[i] == 0 ){
-                    client_socket[i] = new_socket;
-                    //printf("Adding to list of sockets as %d\n" , i);
-                    break;
+            else {
+                if(send(new_socket, "Ban", strlen("Ban"), 0) != strlen("Ban")) {
+                    ERR_EXIT("begin send error");
                 }
             }
         }
@@ -159,6 +167,7 @@ int main(int argc, char *argv[]){
                         DIR *d;
                         struct dirent *dir;
                         char path[30];
+
                         sprintf(path, "./server_dir/%s", user);
                         d = opendir(path);
                         if (d) {
@@ -177,6 +186,27 @@ int main(int argc, char *argv[]){
                             ERR_EXIT("ls errer");
                         }
                     }
+                    else if (strcmp(cmd, "put") == 0) {
+                        char* filename = strsep(&temp, " ");
+                        pid_t pid;
+
+                        memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                        sprintf(buffer, "OK");
+                        if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                            ERR_EXIT("put init errer");
+                        }
+
+                        char path[50];
+                        sprintf(path, "./server_dir/%s/%s", user, filename);
+                        write_file(new_socket, path);
+                        
+                        memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                        sprintf(buffer, "Done");
+                        if(send(new_socket, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                            ERR_EXIT("put finish errer");
+                        }
+                    }
+
                     /* admin operation */
                     else if (strcmp(cmd, "banlist") == 0) {
                         if (strcmp(user, "admin") == 0){
@@ -281,11 +311,6 @@ int main(int argc, char *argv[]){
                                 }
                                 else {
                                     sprintf(new_file, "%s%s\n", new_file, line);
-                                    /*
-                                    new_file = realloc(new_file, strlen(new_file) + sizeof(line));
-                                    strcat(new_file, line);
-                                    printf("%s", new_file);
-                                    */
                                 }
                             }
                             fclose(f);

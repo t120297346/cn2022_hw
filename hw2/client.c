@@ -7,6 +7,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 
+#include "util.h"
+
 #define BUFF_SIZE 1024
 #define PORT 8787
 #define ERR_EXIT(a){ perror(a); exit(1); }
@@ -45,8 +47,14 @@ int main(int argc , char *argv[]){
     if((read_byte = read(sockfd, buffer, sizeof(buffer) - 1)) < 0){
         ERR_EXIT("receive failed\n");
     }
+
     if(strcmp(buffer, "Hello") == 0){
         printf("User %s successfully logged in\n", argv[1]);
+    }
+    else if (strcmp(buffer, "Ban") == 0) {
+        printf("User %s has been banned\n", argv[1]);
+        close(sockfd);
+        return 0;
     }
     
     while(1){
@@ -77,15 +85,44 @@ int main(int argc , char *argv[]){
 
         }
         else if(strcmp(cmd, "put") == 0){
-            char filename[30];
-            scanf("%s",filename);
-            printf("%s\n", filename);
+            char* filename = strdup(cmd);
+            char file_loc[40] = "./client_dir/";
+            filename = strtok(NULL, " ");
+            sprintf(file_loc, "%s%s", file_loc, filename);
+
+            if (access(file_loc, F_OK) == 0) {
+                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                sprintf(buffer, "%s %s %s ", argv[1], cmd, filename);
+                if(send(sockfd, buffer, strlen(buffer), 0) != strlen(buffer)) {
+                    ERR_EXIT("send banlist failed");
+                }   
+
+                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                if((read_byte = read(sockfd, buffer, sizeof(buffer) - 1)) < 0){
+                    ERR_EXIT("receive put init failed\n");
+                }
+
+                if(strcmp(buffer, "OK") == 0){
+                    printf("putting %s...\n", filename);
+                    FILE* f = fopen(file_loc, "r");
+                    send_file(f, sockfd);
+                }
+                
+                memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
+                if((read_byte = read(sockfd, buffer, sizeof(buffer) - 1)) < 0){
+                    ERR_EXIT("receive put finish failed\n");
+                }
+            }
+            else {
+                printf("File doesn't exist!\n");
+            }
         }
         else if (strcmp(cmd, "exit") == 0){
             break;
         }
         /* admin operations */
         else if (strcmp(cmd, "banlist") == 0) {
+            memset(buffer, '\0', sizeof(char) * BUFF_SIZE);
             sprintf(buffer, "%s %s ", argv[1], cmd);
             if(send(sockfd, buffer, strlen(buffer), 0) != strlen(buffer)) {
                 ERR_EXIT("send banlist failed");

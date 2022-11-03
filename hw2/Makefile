@@ -17,7 +17,7 @@ all: server client opencv pthread
 server: $(SERVER)
 	$(CC) $(SERVER) util.c -o $(SER) -lstdc++
 client: $(CLIENT)
-	$(CC) $(CLIENT) -o $(CLI)
+	$(CC) $(CLIENT) util.c -o $(CLI) -lstdc++
 opencv: $(OPEN_CV)
 	$(CXX) $(OPEN_CV) -o $(CV) $(INCLUDE_OPENCV)
 pthread: $(PTHREAD)
